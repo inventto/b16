@@ -16,7 +16,7 @@ var app = {
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
         app.receivedEvent('deviceready');
-        game.initialize(true);
+        game.initialize();
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
@@ -39,15 +39,13 @@ function tag(name){return document.createElement(name);}
 
 var game = {
   initialize: function(){
-    if (game.initialized !== undefined)
-      return ;
-    game.initialized = true;
     game.SIZE = 4;
-    game.TIME_SPAN = 30;
+    game.TIME_SPAN = 10;
     game.drawGrid();
     game.randomBlock();
     game.score = 0;
     game.showCountDownTimer();
+    SQLUtil.initialize()
   },
   drawGrid: function(){
     table = tag("table");
@@ -88,7 +86,6 @@ var game = {
     x = 1+parseInt(Math.random() * game.SIZE);
     y = 1+parseInt(Math.random() * game.SIZE);
     where = ".tabuleiro tr:nth-child("+x+") td:nth-child("+y+")"
-    console.log(where)
     cell = gid("game").querySelector(where)
     cell.className = "target"
   
@@ -120,6 +117,41 @@ var game = {
   
   }, onFinishLevel: function(){
     clearInterval(game.countDownTimer);
-    alert("your score is: "+game.score)
+    SQLUtil.insertScore(game.score);
+    SQLUtil.executeSQL("SELECT * FROM scores;", function(tx,results){
+      for (i=0;i<results.rows.lenght;i++){
+        console.log(i,results.rows.item(i))
+      }
+    })
+  },
+}
+
+var SQLUtil = {
+  initialize: function(){
+    SQLUtil.db =  window.openDatabase("b16", "1.0", "Scores database", 1000000);
+    SQLUtil.executeSQL(SQLUtil.createTableScores());
+  },
+  createTableScores: function(){
+    sql = "CREATE TABLE IF NOT EXISTS scores (";
+    sql += " id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ";
+    sql += " played_at DATETIME DEFAULT CURRENT_TIMESTAMP,";
+    sql += " score INT)";
+    return SQLUtil.executeSQL(sql);
+  },
+  insertScore: function(score){
+    return SQLUtil.executeSQL("INSERT INTO scores (score) VALUES ("+score+")");
+  },
+  executeSQL: function(sql,querySuccess){
+    function doExecution(tx) {
+      return tx.executeSql(sql, [], querySuccess);
+    }
+    function onError(err) {
+      console.log("Error processing SQL: "+err.code+": "+err.message);
+    }
+    function onSuccess() {
+      console.log("db success");
+    }
+    return SQLUtil.db.transaction( doExecution, onError, onSuccess);
   }
+
 }
