@@ -110,19 +110,26 @@ var game = {
     progress = gid("time_progress")
     game.startedAt =  new Date().getTime() ; 
     game.countDownTimer = setInterval(function(){
-      passedTime = (game.TIME_SPAN - ((new Date().getTime() - game.startedAt)/1000)).toFixed(3)
-      time.innerHTML = passedTime+"s"
-      percent = (passedTime / 30)  * 100
-      progress.style.width = percent+"%"
-      if (percent <= 0)
-        game.onFinishLevel()
+      if (game.countDownTimer !=null){
+        passedTime = (game.TIME_SPAN - ((new Date().getTime() - game.startedAt)/1000)).toFixed(3)
+        time.innerHTML = passedTime+"s"
+        percent = (passedTime / 30)  * 100
+        progress.style.width = percent+"%"
+        if (percent <= 0)
+          game.onFinishLevel()
+      }
     
     }, 30);
+    console.log("game countDownTimer interval:: "+game.countDownTimer+" ::")
   
   }, onFinishLevel: function(){
-    clearInterval(game.countDownTimer);
-    SQLUtil.insertScore(game.score);
-    game.updateRanking();
+    if (game.countDownTimer!=null){
+      console.log("onFinishLevel:: clearInterval("+game.countDownTimer+")")
+      clearInterval(game.countDownTimer);
+      game.countDownTimer = null;
+      SQLUtil.insertScore(game.score);
+      game.updateRanking();
+    }
   },
   updateRanking: function(){
     SQLUtil.executeSQL("SELECT * FROM scores order by score desc;", function(tx,results){
@@ -202,9 +209,8 @@ var SQLUtil = {
   },
   executeSQL: function(sql,querySuccess){
     if (sql !== undefined && sql != null){
-      console.log("execute sql: ",sql)
+      console.log("execute sql: "+sql)
       doExecution = function(tx) {
-        console.log("do execution sql: ",sql)
         return tx.executeSql(sql, [], querySuccess);
       }
       onError = function(err) {

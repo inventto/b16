@@ -49,6 +49,16 @@ tr,td {
 .score-item {
   position: fixed;
   left: 20px;
-
 }
-
+#show_ranking {
+  display: none;
+  position: fixed;
+  right: 48%;
+}
+#ranking_results{
+  position: fixed;
+  width: auto;
+  margin-top: 40px;
+  right: 35%;
+  background-color: orange;
+}
