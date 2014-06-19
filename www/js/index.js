@@ -37,6 +37,9 @@ function isCordova() {
 function gid(id){return document.getElementById(id);}
 function tag(name){return document.createElement(name);}
 
+function show(id){ gid(id).setAttribute('style', 'display:block;'); }
+function hide(id){ gid(id).setAttribute('style', 'display:none;'); }
+
 var game = {
   initialize: function(){
     game.SIZE = 4;
@@ -46,6 +49,7 @@ var game = {
     game.score = 0;
     game.showCountDownTimer();
     SQLUtil.initialize()
+    game.updateRanking();
   },
   drawGrid: function(){
     table = tag("table");
@@ -62,7 +66,7 @@ var game = {
         col.attributes.x=x
         col.attributes.y=y
  
-        col.addEventListener(isCordova() ? 'touchstart' : 'click',game.validateClick, false)
+        col.addEventListener(isCordova() ? 'touchstart' : 'click',game.validateClick)
         col.style.height = colHeight + "px";
         col.style.width = colWidht + "px";
         row.appendChild(col);
@@ -118,12 +122,67 @@ var game = {
   }, onFinishLevel: function(){
     clearInterval(game.countDownTimer);
     SQLUtil.insertScore(game.score);
-    SQLUtil.executeSQL("SELECT * FROM scores;", function(tx,results){
-      for (i=0;i<results.rows.lenght;i++){
-        console.log(i,results.rows.item(i))
+    game.updateRanking();
+  },
+  updateRanking: function(){
+    SQLUtil.executeSQL("SELECT * FROM scores order by score desc;", function(tx,results){
+      rankingTitle = gid("show_ranking")
+      rankingTitle.innerHTML = results.rows.length+ " Scores"
+      rankingTitle.addEventListener('click',game.showRanking)
+      rankingTitle.setAttribute('style', 'display: block')
+      
+      table = tag("table")
+      table.id = "ranking_results"
+      table.title = "Ranking Results"
+      table.style.backgroundColor = "orange"
+      table.setAttribute('style', 'display:none;');
+      row = tag("tr")
+      row.th = function(name){
+        col = tag("th")
+        col.innerHTML = name
+        this.appendChild(col)
       }
+      row.th("id")
+      row.th("score")
+      row.th("played at")
+      thead = tag("thread")
+      thead.appendChild(row)
+      table.appendChild(thead)
+      for (i=0;i<results.rows.length;i++){
+        score_item =results.rows.item(i)
+        row = tag("tr")
+        row.td = function(value){
+          col = tag("td")
+          col.innerHTML = value
+          this.appendChild(col)
+        }
+        row.td(score_item["id"])
+        row.td(score_item["score"])
+        row.td(score_item["played_at"])
+        row.appendChild(col)
+        table.appendChild(row)
+      }
+      if (old_table =  gid("ranking").querySelector("table#ranking_results")){
+        gid("ranking").removeChild(old_table)
+      }
+      gid("ranking").appendChild(table)
     })
   },
+  showRanking: function(){
+    show("ranking_results");
+    //hide("game");
+    gid("show_ranking").innerHTML = "Hide Scores"
+    rankingTitle.removeEventListener('click',game.showRanking)
+    rankingTitle.addEventListener('click',game.hideRanking)
+
+  }, 
+  hideRanking: function(){
+    hide("ranking_results");
+    show("game");
+    gid("show_ranking").innerHTML = "Show Scores"
+    rankingTitle.removeEventListener('click',game.hideRanking)
+    rankingTitle.addEventListener('click',game.showRanking)
+  }
 }
 
 var SQLUtil = {
@@ -142,16 +201,20 @@ var SQLUtil = {
     return SQLUtil.executeSQL("INSERT INTO scores (score) VALUES ("+score+")");
   },
   executeSQL: function(sql,querySuccess){
-    function doExecution(tx) {
-      return tx.executeSql(sql, [], querySuccess);
+    if (sql !== undefined && sql != null){
+      console.log("execute sql: ",sql)
+      doExecution = function(tx) {
+        console.log("do execution sql: ",sql)
+        return tx.executeSql(sql, [], querySuccess);
+      }
+      onError = function(err) {
+        console.log("Error processing SQL: "+sql+">>>"+err.code+": "+err.message);
+      }
+      onSuccess = function() {
+        console.log("db success");
+      }
+      return SQLUtil.db.transaction( doExecution, onError, onSuccess);
     }
-    function onError(err) {
-      console.log("Error processing SQL: "+err.code+": "+err.message);
-    }
-    function onSuccess() {
-      console.log("db success");
-    }
-    return SQLUtil.db.transaction( doExecution, onError, onSuccess);
   }
 
 }
