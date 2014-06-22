@@ -42,6 +42,8 @@ function hide(id){ gid(id).setAttribute('style', 'display:none;'); }
 
 var game = {
   initialize: function(){
+    if (game.SIZE !== undefined) return;
+    document.body.addEventListener('touchstart', function(e){ e.preventDefault(); });
     game.SIZE = 4;
     game.TIME_SPAN = 10;
     game.drawGrid();
@@ -55,9 +57,14 @@ var game = {
     table = tag("table");
     table.className = "tabuleiro"
     table.style.borderSize = 1;
-
-    var colHeight = (screen.height / game.SIZE ) * 0.9
-    var colWidht = screen.width / game.SIZE
+    h = screen.height;
+    w = screen.width;
+    if (h > w){
+      h = screen.width;
+      w = screen.height;
+    }
+    var colHeight = (h / game.SIZE )
+    var colWidht = (w / game.SIZE )
     for (x=0;x<game.SIZE;x++){
       row = tag("tr");
       for (y=0;y<game.SIZE;y++){
